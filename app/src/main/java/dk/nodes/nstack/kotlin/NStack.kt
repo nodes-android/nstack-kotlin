@@ -8,16 +8,32 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.view.View
-import dk.nodes.nstack.kotlin.managers.*
-import dk.nodes.nstack.kotlin.models.AppUpdateData
-import dk.nodes.nstack.kotlin.models.ClientAppInfo
-import dk.nodes.nstack.kotlin.models.Message
-import dk.nodes.nstack.kotlin.models.TranslationData
+import dk.nodes.nstack.kotlin.managers.AppOpenSettingsManager
+import dk.nodes.nstack.kotlin.managers.AssetCacheManager
+import dk.nodes.nstack.kotlin.managers.ClassTranslationManager
+import dk.nodes.nstack.kotlin.managers.ConnectionManager
+import dk.nodes.nstack.kotlin.managers.NetworkManager
+import dk.nodes.nstack.kotlin.managers.PrefManager
+import dk.nodes.nstack.kotlin.managers.ViewTranslationManager
 import dk.nodes.nstack.kotlin.providers.NStackModule
-import dk.nodes.nstack.kotlin.util.*
+import dk.nodes.nstack.kotlin.util.AppOpenCallback
+import dk.nodes.nstack.kotlin.util.LanguageListener
+import dk.nodes.nstack.kotlin.util.LanguagesListener
+import dk.nodes.nstack.kotlin.util.NLog
+import dk.nodes.nstack.kotlin.util.OnLanguageChangedFunction
+import dk.nodes.nstack.kotlin.util.OnLanguageChangedListener
+import dk.nodes.nstack.kotlin.util.OnLanguagesChangedFunction
+import dk.nodes.nstack.kotlin.util.OnLanguagesChangedListener
+import dk.nodes.nstack.kotlin.util.languageCode
+import dk.nodes.nstack.kotlin.util.locale
+import dk.nodes.nstack.models.AppUpdateData
+import dk.nodes.nstack.models.ClientAppInfo
+import dk.nodes.nstack.models.Message
+import dk.nodes.nstack.models.TranslationData
 import org.json.JSONObject
 import java.lang.ref.WeakReference
-import java.util.*
+import java.util.ArrayList
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 @SuppressLint("StaticFieldLeak", "LogNotTimber")
@@ -176,7 +192,7 @@ object NStack {
         getApplicationInfo(context)
         registerLocaleChangeBroadcastListener(context)
 
-        networkManager = NetworkManager(context)
+        networkManager = NetworkManager()
         connectionManager = ConnectionManager(context)
         assetCacheManager = AssetCacheManager(context)
         clientAppInfo = ClientAppInfo(context)
@@ -229,7 +245,7 @@ object NStack {
                     NLog.d(this, "NStack appOpen")
 
                     appUpdate.localize.forEach { localizeIndex ->
-                        if (localizeIndex.shouldUpdate) {
+                        if (localizeIndex.should_update) {
                             networkManager.loadTranslation(localizeIndex.url, {
                                 prefManager.setTranslations(localizeIndex.language.locale, it)
                             }, {
@@ -238,7 +254,7 @@ object NStack {
 
                             appOpenSettingsManager.setUpdateDate()
                         }
-                        if (localizeIndex.language.isDefault) {
+                        if (localizeIndex.language.is_default) {
                             defaultLanguage = localizeIndex.language.locale
                         }
                     }

@@ -1,4 +1,4 @@
-package dk.nodes.nstack.kotlin.models
+package dk.nodes.nstack.models
 
 object Constants {
     const val spk_nstack_network_update_time = "spk_nstack_network_update_time"

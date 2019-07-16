@@ -1,37 +1,51 @@
 package dk.nodes.nstack.kotlin.managers
 
-import android.content.Context
+import dk.nodes.nstack.ApiClient
 import dk.nodes.nstack.kotlin.NStack
-import dk.nodes.nstack.kotlin.models.AppOpenSettings
-import dk.nodes.nstack.kotlin.models.AppUpdateData
-import dk.nodes.nstack.kotlin.models.AppUpdateResponse
-import dk.nodes.nstack.kotlin.providers.HttpClientProvider
 import dk.nodes.nstack.kotlin.util.NLog
-import dk.nodes.nstack.kotlin.util.asJsonObject
-import dk.nodes.nstack.kotlin.util.formatted
-import okhttp3.*
-import java.io.IOException
+import dk.nodes.nstack.models.AppOpenSettings
+import dk.nodes.nstack.models.AppUpdateData
+import dk.nodes.nstack.shared.ApplicationDispatcher
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.http.Url
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
-class NetworkManager(context: Context) {
+class NetworkManager {
 
-    private val client = HttpClientProvider.getHttpClient(context)
+    private val client = HttpClient()
+    private val nstackApi = ApiClient(
+        NStack.baseUrl + "/api", NStack.appIdKey,
+        NStack.appApiKey, client
+    )
 
     fun loadTranslation(url: String, onSuccess: (String) -> Unit, onError: (Exception) -> Unit) {
-        client.newCall(Request.Builder().url(url).build())
-            .enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) {
-                    onError(e)
-                }
 
-                override fun onResponse(call: Call, response: Response) {
-                    try {
-                        val translations = response.body()!!.string().asJsonObject!!.getJSONObject("data")
-                        onSuccess(translations.toString())
-                    } catch (e: Exception) {
-                        onError(e)
-                    }
-                }
-            })
+        GlobalScope.launch (ApplicationDispatcher) {
+            try {
+
+            } catch ()
+            client.get<String>(Url(url)) {
+
+            }
+        }
+        nstackApi.loadTranslation(Url(url), onSuccess, onError)
+//        client.newCall(Request.Builder().url(url).build())
+//            .enqueue(object : Callback {
+//                override fun onFailure(call: Call, e: IOException) {
+//                    onError(e)
+//                }
+//
+//                override fun onResponse(call: Call, response: Response) {
+//                    try {
+//                        val translations = response.body()!!.string().asJsonObject!!.getJSONObject("data")
+//                        onSuccess(translations.toString())
+//                    } catch (e: Exception) {
+//                        onError(e)
+//                    }
+//                }
+//            })
     }
 
     fun postAppOpen(
@@ -40,94 +54,53 @@ class NetworkManager(context: Context) {
         onSuccess: (AppUpdateData) -> Unit,
         onError: (Exception) -> Unit
     ) {
-        val formBuilder = FormBody.Builder()
-            .add("guid", settings.guid)
-            .add("version", settings.version)
-            .add("old_version", settings.oldVersion)
-            .add("platform", settings.platform)
-            .add("last_updated", settings.lastUpdated.formatted)
-            .add("dev", NStack.debugMode.toString())
-
-        val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v2/open")
-            .header("Accept-Language", acceptLanguage)
-            .post(formBuilder.build())
-            .build()
-
-
-        client
-            .newCall(request)
-            .enqueue(object : Callback {
-                override fun onFailure(call: Call?, e: IOException) {
-                    onError.invoke(e)
-                }
-
-                override fun onResponse(call: Call?, response: Response?) {
-                    try {
-                        val responseString = response?.body()?.string()!!
-                        val appUpdate = AppUpdateResponse(responseString.asJsonObject!!)
-                        onSuccess.invoke(appUpdate.data)
-                    } catch (e: Exception) {
-                        onError(e)
-                    }
-                }
-            })
+        GlobalScope.launch(ApplicationDispatcher) {
+            try {
+                val response = nstackApi.postAppOpen(
+                    acceptLanguage,
+                    settings.platform,
+                    settings.guid,
+                    settings.version,
+                    settings.old_version,
+                    settings.last_updated
+                )
+                onSuccess(response.data)
+            } catch (ex: Exception) {
+                onError(ex)
+            }
+        }
     }
 
     /**
      * Notifies the backend that the message has been seen
      */
     fun postMessageSeen(guid: String, messageId: Int) {
-        val formBuilder = FormBody.Builder()
-            .add("guid", guid)
-            .add("message_id", messageId.toString())
-
-        val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v1/notify/messages/views")
-            .post(formBuilder.build())
-            .build()
-
-        client
-            .newCall(request)
-            .enqueue(object : Callback {
-
-                override fun onFailure(call: Call, e: IOException) {
-                    NLog.e(this, "Failure posting message seen", e)
-                }
-
-                override fun onResponse(call: Call, response: Response) {
-                    NLog.v(this, "Message seen")
-                }
-            })
+        GlobalScope.launch(ApplicationDispatcher) {
+            try {
+                nstackApi.postNotifyMessagesViews(guid.toInt(), messageId)
+                NLog.v(this, "Message seen")
+            } catch (ex: Exception) {
+                NLog.e(this, "Failure posting message seen", ex)
+            }
+        }
     }
 
     /**
      * Notifies the backend that the rate reminder has been seen
      */
     fun postRateReminderSeen(appOpenSettings: AppOpenSettings, rated: Boolean) {
-        val answer = if (rated) "yes" else "no"
+        GlobalScope.launch(ApplicationDispatcher) {
+            try {
+                nstackApi.postNotifyRateReminderViews(
+                    guid = appOpenSettings.guid.toInt(),
+                    platform = appOpenSettings.platform,
+                    answer = if (rated) "yes" else "no"
+                )
+                NLog.v(this, "Rate reminder seen")
+            } catch (ex: Exception) {
+                NLog.e(this, "Failure posting rate reminder seen", ex)
+            }
 
-        val formBuilder = FormBody.Builder()
-            .add("guid", appOpenSettings.guid)
-            .add("platform", appOpenSettings.platform)
-            .add("answer", answer)
-
-        val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v1/notify/rate_reminder/views")
-            .post(formBuilder.build())
-            .build()
-
-        client
-            .newCall(request)
-            .enqueue(object : Callback {
-
-                override fun onFailure(call: Call, e: IOException) {
-                    NLog.e(this, "Failure posting rate reminder seen", e)
-                }
-
-                override fun onResponse(call: Call, response: Response) {
-                    NLog.v(this, "Rate reminder seen")
-                }
-            })
+        }
     }
 }

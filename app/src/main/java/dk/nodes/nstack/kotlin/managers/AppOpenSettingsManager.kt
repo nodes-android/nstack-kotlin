@@ -1,13 +1,13 @@
 package dk.nodes.nstack.kotlin.managers
 
 import android.content.Context
-import dk.nodes.nstack.kotlin.models.AppOpenSettings
-import dk.nodes.nstack.kotlin.models.Constants
 import dk.nodes.nstack.kotlin.util.NLog
 import dk.nodes.nstack.kotlin.util.Preferences
 import dk.nodes.nstack.kotlin.util.formatted
-import dk.nodes.nstack.kotlin.util.iso8601Date
-import java.util.*
+import dk.nodes.nstack.models.AppOpenSettings
+import dk.nodes.nstack.models.Constants
+import java.util.Date
+import java.util.UUID
 
 /**
  * Manages app open settings
@@ -69,9 +69,8 @@ class AppOpenSettingsManager(
             return preferences.loadString(Constants.spk_nstack_old_version)
         }
 
-    private val appUpdateDate: Date
+    private val appUpdateDate: String
         get() {
-            return preferences.loadString(Constants.spk_nstack_last_updated).iso8601Date
+            return preferences.loadString(Constants.spk_nstack_last_updated)
         }
-
 }

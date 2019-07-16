@@ -1,13 +1,13 @@
 package dk.nodes.nstack.kotlin.managers
 
-import dk.nodes.nstack.kotlin.models.Constants
 import dk.nodes.nstack.kotlin.util.Preferences
 import dk.nodes.nstack.kotlin.util.asJsonObject
 import dk.nodes.nstack.kotlin.util.formatted
 import dk.nodes.nstack.kotlin.util.iso8601Date
+import dk.nodes.nstack.models.Constants
 import org.json.JSONObject
-import java.util.*
-
+import java.util.Date
+import java.util.Locale
 
 /**
  * Manages last update date and translations

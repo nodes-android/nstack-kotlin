@@ -10,6 +10,7 @@ class AssetCacheManager(private val context: Context) {
 
     fun loadTranslations(): Map<Locale, JSONObject> {
         return context.resources.assets.list("")
+            ?.asSequence()
             ?.filter { it.startsWith("translations") }
             ?.mapNotNull { loadTranslation(it) }
             ?.filter { it.translations != null }
