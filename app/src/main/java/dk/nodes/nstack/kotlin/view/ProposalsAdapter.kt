@@ -3,6 +3,7 @@ package dk.nodes.nstack.kotlin.view
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import dk.nodes.nstack.R
@@ -11,13 +12,15 @@ import dk.nodes.nstack.kotlin.models.Proposal
 class ProposalsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val list = mutableListOf<Item>()
+    private val proposalList = mutableListOf<Proposal>()
+
+    var onDeleteProposalClick: ((Long) -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
             Header -> HeaderViewHolder(inflater.inflate(R.layout.item_header, parent, false))
             Row -> RowViewHolder(inflater.inflate(R.layout.item_proposal, parent, false))
-
             else -> throw IllegalArgumentException()
         }
     }
@@ -41,9 +44,11 @@ class ProposalsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     }
 
     fun update(newList: List<Proposal>) {
+        proposalList.clear()
+        proposalList += newList
         list.clear()
-        newList.groupBy { it.key }.forEach { entry ->
-            list += Item.Header(entry.key)
+        newList.groupBy { it.key to it.section }.forEach { entry ->
+            list += Item.Header(entry.key.first, entry.key.second)
             entry.value.forEach {
                 list += Item.Row(it.id, it.value)
             }
@@ -51,23 +56,31 @@ class ProposalsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         notifyDataSetChanged()
     }
 
-    private class RowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    fun removeItem(proposalId: Long) {
+        update(proposalList.filterNot { it.id == proposalId })
+    }
+
+    private inner class RowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val proposalTv: TextView = itemView.findViewById(R.id.proposalTv)
+        private val deleteBtn: ImageButton = itemView.findViewById(R.id.deleteBtn)
 
         fun bind(row: Item.Row) {
             proposalTv.text = row.value
+            deleteBtn.setOnClickListener {
+                onDeleteProposalClick?.invoke(row.id)
+            }
         }
     }
 
     private class HeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val headerTv: TextView = itemView.findViewById(R.id.headerTv)
         fun bind(header: Item.Header) {
-            headerTv.text = header.key
+            headerTv.text = """${header.section}_${header.key}"""
         }
     }
 
     private sealed class Item {
-        data class Header(val key: String) : Item()
+        data class Header(val key: String, val section: String) : Item()
         data class Row(val id: Long, val value: String) : Item()
     }
 

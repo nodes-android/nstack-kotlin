@@ -20,6 +20,7 @@ import dk.nodes.nstack.kotlin.models.TranslationData
 import dk.nodes.nstack.kotlin.models.local.KeyAndTranslation
 import dk.nodes.nstack.kotlin.view.KeyAndTranslationAdapter
 import dk.nodes.nstack.kotlin.view.ProposalsAdapter
+import java.lang.ref.WeakReference
 
 typealias LiveEditDialogListener = (View, Pair<TranslationData, TranslationData>) -> Unit
 typealias LiveEditProposalsDialogListener = (View) -> Unit
@@ -29,10 +30,12 @@ class LiveEditManager(
     private val appOpenSettingsManager: AppOpenSettingsManager
 ) {
     private fun showLiveEditDialog(
-        view: View,
+        v: View,
         keyAndTranslation: KeyAndTranslation
     ) {
-        val bottomSheetDialog = BottomSheetDialog(view.context, R.style.NstackBottomSheetTheme)
+        val viewWeakRef = WeakReference(v)
+        val bottomSheetDialog =
+            BottomSheetDialog(viewWeakRef.get()?.context ?: return, R.style.NstackBottomSheetTheme)
         bottomSheetDialog.setContentView(R.layout.bottomsheet_translation_change)
         bottomSheetDialog.setOnShowListener {
             val bottomSheetInternal =
@@ -54,7 +57,7 @@ class LiveEditManager(
                 editedTranslation,
                 onSuccess = {
                     runUiAction {
-                        when (view) {
+                        when (val view: View = viewWeakRef.get() ?: return@runUiAction) {
                             is ToggleButton -> {
                                 when (keyAndTranslation.styleable) {
                                     R.styleable.nstack_key, R.styleable.nstack_text -> view.text =
@@ -87,7 +90,11 @@ class LiveEditManager(
                 },
                 onError = {
                     runUiAction {
-                        Toast.makeText(view.context, "Unknown Error", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            viewWeakRef.get()?.context ?: return@runUiAction,
+                            "Unknown Error",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             )
@@ -121,13 +128,15 @@ class LiveEditManager(
     }
 
     fun showProposalsDialog(
-        view: View,
+        v: View,
         keyAndTranslationList: List<KeyAndTranslation> = emptyList(),
         showDialogOnLoad: Boolean = false
     ) {
+        val viewWeakRef = WeakReference(v)
         networkManager.fetchProposals(
             { proposals ->
                 runUiAction {
+                    val view: View = viewWeakRef.get() ?: return@runUiAction
                     if (proposals.isNotEmpty()) {
                         val bottomSheetDialog =
                             BottomSheetDialog(view.context, R.style.NstackBottomSheetTheme)
@@ -144,13 +153,26 @@ class LiveEditManager(
                             height = getWindowHeight() * 2 / 3
                         }
 
-                        recyclerView.adapter = ProposalsAdapter().apply {
+                        recyclerView.adapter = ProposalsAdapter().also { adapter ->
                             val sectionAndKeyPairList =
                                 keyAndTranslationList.map { getSectionAndKeyPair(it.key) }
                             if (sectionAndKeyPairList.isNotEmpty()) {
-                                update(proposals.filter { sectionAndKeyPairList.contains(it.section to it.key) })
+                                adapter.update(proposals.filter { sectionAndKeyPairList.contains(it.section to it.key) })
                             } else {
-                                update(proposals)
+                                adapter.update(proposals)
+                            }
+                            adapter.onDeleteProposalClick = { proposalId ->
+                                networkManager.deleteProposal(appOpenSettingsManager.getAppOpenSettings(),
+                                    NStack.language.toString().replace("_", "-"),
+                                    proposalId,
+                                    {
+                                        viewWeakRef.get() ?: return@deleteProposal
+                                        runUiAction {
+                                            adapter.removeItem(proposalId)
+                                        }
+                                    }, {
+
+                                    })
                             }
                         }
                         if (showDialogOnLoad) {
@@ -173,7 +195,11 @@ class LiveEditManager(
                 }
             },
             {
-                Toast.makeText(view.context, "Unknown Error", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    viewWeakRef.get()?.context ?: return@fetchProposals,
+                    "Unknown Error",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         )
     }
@@ -199,20 +225,26 @@ class LiveEditManager(
     }
 
     fun showChooseOptionDialog(
-        view: View,
+        v: View,
         translationPair: Pair<TranslationData, TranslationData>
     ) {
-        val builder = AlertDialog.Builder(view.context)
+        val viewWeakRef = WeakReference(v)
+
+        val builder = AlertDialog.Builder(v.context)
             .setTitle("NStack proposal")
             .setPositiveButton("View translation proposals") { _, _ ->
-                showProposalsDialog(view, translationPair.toKeyAndTranslationList(), true)
+                showProposalsDialog(
+                    viewWeakRef.get() ?: return@setPositiveButton,
+                    translationPair.toKeyAndTranslationList(),
+                    true
+                )
             }
             .setNegativeButton("Propose new translation") { _, _ ->
                 val list = translationPair.toKeyAndTranslationList()
                 if (list.size == 1) {
-                    showLiveEditDialog(view, list.first())
+                    showLiveEditDialog(viewWeakRef.get() ?: return@setNegativeButton, list.first())
                 } else {
-                    showChooseSectionKeyDialog(view, list)
+                    showChooseSectionKeyDialog(viewWeakRef.get() ?: return@setNegativeButton, list)
                 }
 
             }

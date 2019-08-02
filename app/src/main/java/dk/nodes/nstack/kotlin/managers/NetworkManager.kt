@@ -259,9 +259,9 @@ class NetworkManager {
                     override fun onResponse(call: Call, response: Response) {
                         val jsonObject = response.body()?.string()?.asJsonObject
                         if (jsonObject != null && jsonObject.has("data")) {
-                            onSuccess.invoke()
+                            onSuccess()
                         } else {
-                            onError.invoke(IOException())
+                            onError(IOException())
                         }
                     }
                 }
@@ -287,5 +287,42 @@ class NetworkManager {
                 onSuccess.invoke(proposals)
             }
         })
+    }
+
+
+    // Untested waiting for backend
+    fun deleteProposal(settings: AppOpenSettings,
+                       locale: String,
+                       proposalId: Long,
+                       onSuccess: () -> Unit,
+                       onError: (IOException) -> Unit) {
+
+        val formBuilder = FormBody.Builder()
+            .add("locale", locale)
+            .add("guid", settings.guid)
+            .add("platform", "mobile")
+
+
+        val request = Request.Builder()
+            .url("${NStack.baseUrl}/api/v2/content/localize/proposals/$proposalId")
+            .delete(formBuilder.build())
+            .build()
+
+        client
+            .newCall(request)
+            .enqueue(object : Callback {
+
+                override fun onFailure(call: Call, e: IOException) {
+                    onError(e)
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    val responseBody = response.body()
+                    when {
+                        response.isSuccessful && responseBody != null -> onSuccess.invoke()
+                        else -> onError(IOException())
+                    }
+                }
+            })
     }
 }
