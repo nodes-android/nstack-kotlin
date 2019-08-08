@@ -13,7 +13,6 @@ repositories {
 apply plugin: 'com.android.library'
 apply plugin: 'kotlinx-serialization'
 apply plugin: 'kotlin-android-extensions'
-apply plugin: 'kotlinx-serialization'
 apply from: 'maven-push.gradle'
 
 
