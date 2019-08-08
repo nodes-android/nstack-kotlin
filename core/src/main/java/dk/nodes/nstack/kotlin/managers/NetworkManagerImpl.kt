@@ -1,15 +1,12 @@
 package dk.nodes.nstack.kotlin.managers
 
-import dk.nodes.nstack.kotlin.NStack
 import dk.nodes.nstack.kotlin.models.AppOpenResult
 import dk.nodes.nstack.kotlin.models.AppOpenSettings
 import dk.nodes.nstack.kotlin.models.AppUpdateData
 import dk.nodes.nstack.kotlin.models.AppUpdateResponse
 import dk.nodes.nstack.kotlin.models.Proposal
-import dk.nodes.nstack.kotlin.util.NLog
-import dk.nodes.nstack.kotlin.util.extensions.asJsonObject
-import dk.nodes.nstack.kotlin.util.extensions.formatted
-import dk.nodes.nstack.kotlin.util.extensions.parseFromString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonConfiguration
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.FormBody
@@ -17,9 +14,18 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkManager {
+class NetworkManagerImpl(
+    private val client: OkHttpClient,
+    private val baseUrl: String,
+    private val debugMode: Boolean
+) :
+    NetworkManager {
 
+    private val json = Json(JsonConfiguration.Default)
     override fun loadTranslation(
         url: String,
         onSuccess: (String) -> Unit,
@@ -33,8 +39,9 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
 
                 override fun onResponse(call: Call, response: Response) {
                     try {
-                        val translations =
-                            response.body()!!.string().asJsonObject!!.getJSONObject("data")
+
+                         val translations =
+                            json.parseJson(response.body()!!.string()).jsonObject["data"]
                         onSuccess(translations.toString())
                     } catch (e: Exception) {
                         onError(e)
@@ -47,9 +54,8 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
         val response = client.newCall(Request.Builder().url(url).build()).execute()
         val responseBody = response.body()
         return when {
-            response.isSuccessful && responseBody != null -> responseBody.string().asJsonObject?.getJSONObject(
-                "data"
-            ).toString()
+            response.isSuccessful && responseBody != null -> json.parseJson(responseBody.string()).jsonObject["data"]
+            .toString()
             else -> null
         }
     }
@@ -66,10 +72,10 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
             .add("old_version", settings.oldVersion)
             .add("platform", settings.platform)
             .add("last_updated", settings.lastUpdated.formatted)
-            .add("dev", NStack.debugMode.toString())
+            .add("dev", debugMode.toString())
 
         val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v2/open")
+            .url("${baseUrl}/api/v2/open")
             .header("Accept-Language", acceptLanguage)
             .post(formBuilder.build())
             .build()
@@ -81,11 +87,15 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
                     onError.invoke(e)
                 }
 
+
                 override fun onResponse(call: Call?, response: Response?) {
                     try {
+
                         val responseString = response?.body()?.string()!!
-                        val appUpdate = AppUpdateResponse(responseString.asJsonObject!!)
-                        onSuccess.invoke(appUpdate.data)
+                        val appUpdate = json.parse(AppUpdateResponse.serializer(), responseString)
+                        onSuccess(appUpdate.data)
+                        print(appUpdate)
+//                        onSuccess.invoke(appUpdate.data)
                     } catch (e: Exception) {
                         onError(e)
                     }
@@ -103,10 +113,10 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
             .add("old_version", settings.oldVersion)
             .add("platform", settings.platform)
             .add("last_updated", settings.lastUpdated.formatted)
-            .add("dev", NStack.debugMode.toString())
+            .add("dev", debugMode.toString())
 
         val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v2/open")
+            .url("${baseUrl}/api/v2/open")
             .header("Accept-Language", acceptLanguage)
             .post(formBuilder.build())
             .build()
@@ -117,9 +127,10 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
                 .execute()
 
             val responseString = response?.body()?.string() ?: return AppOpenResult.Failure
-            val appUpdate =
-                AppUpdateResponse(responseString.asJsonObject ?: return AppOpenResult.Failure)
-            return AppOpenResult.Success(appUpdate)
+//            val appUpdate =
+//                AppUpdateResponse(responseString.asJsonObject ?: return AppOpenResult.Failure)
+//            return AppOpenResult.Success(appUpdate)
+            return AppOpenResult.Failure
         } catch (e: Exception) {
             return AppOpenResult.Failure
         }
@@ -134,7 +145,7 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
             .add("message_id", messageId.toString())
 
         val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v1/notify/messages/views")
+            .url("${baseUrl}/api/v1/notify/messages/views")
             .post(formBuilder.build())
             .build()
 
@@ -143,11 +154,11 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
             .enqueue(object : Callback {
 
                 override fun onFailure(call: Call, e: IOException) {
-                    NLog.e(this, "Failure posting message seen", e)
+//                    NLog.e(this, "Failure posting message seen", e)
                 }
 
                 override fun onResponse(call: Call, response: Response) {
-                    NLog.v(this, "Message seen")
+//                    NLog.v(this, "Message seen")
                 }
             })
     }
@@ -164,7 +175,7 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
             .add("answer", answer)
 
         val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v1/notify/rate_reminder/views")
+            .url("${baseUrl}/api/v1/notify/rate_reminder/views")
             .post(formBuilder.build())
             .build()
 
@@ -173,11 +184,11 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
             .enqueue(object : Callback {
 
                 override fun onFailure(call: Call, e: IOException) {
-                    NLog.e(this, "Failure posting rate reminder seen", e)
+//                    NLog.e(this, "Failure posting rate reminder seen", e)
                 }
 
                 override fun onResponse(call: Call, response: Response) {
-                    NLog.v(this, "Rate reminder seen")
+//                    NLog.v(this, "Rate reminder seen")
                 }
             })
     }
@@ -191,7 +202,7 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
         onError: (Exception) -> Unit
     ) {
         val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v1/content/responses/$slug")
+            .url("${baseUrl}/api/v1/content/responses/$slug")
             .get()
             .build()
 
@@ -200,7 +211,7 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
             .enqueue(object : Callback {
 
                 override fun onFailure(call: Call, e: IOException) {
-                    NLog.e(this, "Failure getting slug: $slug", e)
+//                    NLog.e(this, "Failure getting slug: $slug", e)
                     onError.invoke(e)
                 }
 
@@ -221,7 +232,7 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
      */
     override suspend fun getResponseSync(slug: String): String? {
         val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v1/content/responses/$slug")
+            .url("${baseUrl}/api/v1/content/responses/$slug")
             .get()
             .build()
 
@@ -255,7 +266,7 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
             .add("platform", "mobile")
 
         val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v2/content/localize/proposals")
+            .url("${baseUrl}/api/v2/content/localize/proposals")
             .post(formBuilder.build())
             .build()
 
@@ -266,12 +277,12 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
                 }
 
                 override fun onResponse(call: Call, response: Response) {
-                    val jsonObject = response.body()?.string()?.asJsonObject
-                    if (jsonObject != null && jsonObject.has("data")) {
-                        onSuccess()
-                    } else {
+//                    val jsonObject = response.body()?.string()?.asJsonObject
+//                    if (jsonObject != null && jsonObject.has("data")) {
+//                        onSuccess()
+//                    } else {
                         onError(IOException())
-                    }
+//                    }
                 }
             }
         )
@@ -282,7 +293,7 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
         onError: (Exception) -> Unit
     ) {
         val request = Request.Builder()
-            .url("${NStack.baseUrl}/api/v2/content/localize/proposals")
+            .url("${baseUrl}/api/v2/content/localize/proposals")
             .get()
             .build()
 
@@ -294,9 +305,18 @@ internal class NetworkManagerImpl(private val client: OkHttpClient) : NetworkMan
             override fun onResponse(call: Call, response: Response) {
                 val responseString = response.body()?.string()
                 val proposals = mutableListOf<Proposal>()
-                proposals.parseFromString(responseString)
+//                proposals.parseFromString(responseString)
                 onSuccess(proposals)
             }
         })
     }
+
+    companion object {
+        private const val DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ"
+    }
+
+    private val Date.formatted: String
+        get() {
+            return SimpleDateFormat(DATE_FORMAT, Locale.getDefault()).format(this)
+        }
 }

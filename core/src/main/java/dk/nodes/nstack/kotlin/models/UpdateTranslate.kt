@@ -1,8 +1,14 @@
 package dk.nodes.nstack.kotlin.models
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class UpdateTranslate(
-    val title: String,
+    @SerialName("message")
     val message: String,
-    val positiveButton: String,
-    val negativeButton: String
+    @SerialName("positiveBtn")
+    val positiveBtn: String,
+    @SerialName("title")
+    val title: String
 )

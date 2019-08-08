@@ -293,7 +293,7 @@ object NStack : TranslationHolder {
                     appUpdate.localize.forEach { localizeIndex ->
                         if (localizeIndex.shouldUpdate) {
                             networkManager.loadTranslation(localizeIndex.url, {
-                                prefManager.setTranslations(localizeIndex.language.locale, it)
+                                prefManager.setTranslations(Locale(localizeIndex.language.locale), it)
                                 if (localizeIndex.language.isBestFit) {
                                     onLanguagesChanged()
                                     onLanguageChanged()
@@ -309,11 +309,11 @@ object NStack : TranslationHolder {
                             appOpenSettingsManager.setUpdateDate()
                         }
                         if (localizeIndex.language.isDefault) {
-                            defaultLanguage = localizeIndex.language.locale
+                            defaultLanguage = Locale(localizeIndex.language.locale)
                         }
 
                         if (localizeIndex.language.isBestFit) {
-                            language = localizeIndex.language.locale
+                            language = Locale(localizeIndex.language.locale)
                         }
                     }
                     contextWrapper.runUiAction {
@@ -381,11 +381,11 @@ object NStack : TranslationHolder {
     private suspend fun handleLocalizeIndex(index: LocalizeIndex) {
         if (index.shouldUpdate) {
             val translation = networkManager.loadTranslation(index.url) ?: return
-            prefManager.setTranslations(index.language.locale, translation)
+            prefManager.setTranslations(Locale(index.language.locale), translation)
             appOpenSettingsManager.setUpdateDate()
         }
         if (index.language.isDefault) {
-            defaultLanguage = index.language.locale
+            defaultLanguage = Locale(index.language.locale)
         }
     }
 

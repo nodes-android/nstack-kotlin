@@ -1,13 +1,28 @@
 package dk.nodes.nstack.kotlin.models
 
-/**
- * Info for rate reminder dialog
- */
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Optional
+
+@Serializable
 data class RateReminder(
-    val title: String,
+
+    @SerialName("body")
     val body: String,
-    val yesButton: String,
-    val laterButton: String,
-    val noButton: String,
-    val link: String
+
+    @SerialName("laterBtn")
+    val laterBtn: String,
+
+    @SerialName("link")
+    val link: String,
+
+    @SerialName("noBtn")
+    val noBtn: String,
+
+    @SerialName("title")
+    val title: String,
+
+    @SerialName("yesBtn")
+    val yesBtn: String
 )

@@ -2,17 +2,38 @@ package dk.nodes.nstack.kotlin
 
 import android.content.Context
 import android.content.Intent
-import dk.nodes.nstack.kotlin.managers.*
-import dk.nodes.nstack.kotlin.models.*
+import dk.nodes.nstack.kotlin.managers.AppOpenSettingsManager
+import dk.nodes.nstack.kotlin.managers.AssetCacheManager
+import dk.nodes.nstack.kotlin.managers.ClassTranslationManager
+import dk.nodes.nstack.kotlin.managers.ConnectionManager
+import dk.nodes.nstack.kotlin.managers.NetworkManager
+import dk.nodes.nstack.kotlin.managers.PrefManager
+import dk.nodes.nstack.kotlin.managers.ViewTranslationManager
+import dk.nodes.nstack.kotlin.models.AppOpenResult
+import dk.nodes.nstack.kotlin.models.AppOpenSettings
+import dk.nodes.nstack.kotlin.models.AppUpdateData
+import dk.nodes.nstack.kotlin.models.AppUpdateMeta
+import dk.nodes.nstack.kotlin.models.AppUpdateResponse
+import dk.nodes.nstack.kotlin.models.ClientAppInfo
+import dk.nodes.nstack.kotlin.models.Language
+import dk.nodes.nstack.kotlin.models.LocalizeIndex
+import dk.nodes.nstack.kotlin.models.Message
+import dk.nodes.nstack.kotlin.models.NStackMeta
 import dk.nodes.nstack.kotlin.providers.ManagersModule
 import dk.nodes.nstack.kotlin.providers.NStackModule
 import dk.nodes.nstack.kotlin.util.ContextWrapper
-import io.mockk.*
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.BeforeClass
 import org.junit.Test
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 internal class NStackTest {
 
@@ -107,7 +128,7 @@ internal class NStackTest {
         verify { contextWrapperMock.runUiAction(capture(uiActionSlot)) }
         uiActionSlot.captured()
 
-        assert(NStack.defaultLanguage == language2.locale)
+        assert(NStack.defaultLanguage == Locale(language2.locale))
 
         NStack.onAppUpdateListener = null
     }
@@ -122,7 +143,14 @@ internal class NStackTest {
         NStack.onAppUpdateListener = { updated = true }
         NStack.appOpen { }
 
-        verify { networkManagerMock.postAppOpen(appOpenSettings, any(), any(), capture(errorCallbackSlot)) }
+        verify {
+            networkManagerMock.postAppOpen(
+                appOpenSettings,
+                any(),
+                any(),
+                capture(errorCallbackSlot)
+            )
+        }
         errorCallbackSlot.captured(RuntimeException())
 
         assert(updated)
@@ -154,10 +182,10 @@ internal class NStackTest {
         val result = runBlocking { NStack.appOpen() }
 
         assert(result is AppOpenResult.Success)
-        verify { prefManagerMock.setTranslations(language1.locale, translations1) }
-        verify { prefManagerMock.setTranslations(language2.locale, translations2) }
-        verify(exactly = 0) { prefManagerMock.setTranslations(language3.locale, any()) }
-        assert(NStack.defaultLanguage == language2.locale)
+        verify { prefManagerMock.setTranslations(Locale(language1.locale), translations1) }
+        verify { prefManagerMock.setTranslations(Locale(language2.locale), translations2) }
+        verify(exactly = 0) { prefManagerMock.setTranslations(Locale(language3.locale), any()) }
+        assert(NStack.defaultLanguage == Locale(language2.locale))
     }
 
     @Test
@@ -199,7 +227,8 @@ internal class NStackTest {
         private val nstackMeta = mockk<NStackMeta>()
         private val clientAppInfoMock = mockk<ClientAppInfo>()
         private val viewTranslationManagerMock = mockk<ViewTranslationManager>(relaxUnitFun = true)
-        private val classTranslationManagerMock = mockk<ClassTranslationManager>(relaxUnitFun = true)
+        private val classTranslationManagerMock =
+            mockk<ClassTranslationManager>(relaxUnitFun = true)
         private val connectionManagerMock = mockk<ConnectionManager>()
         private val networkManagerMock = mockk<NetworkManager>(relaxUnitFun = true)
         private val contextWrapperMock = mockk<ContextWrapper>(relaxUnitFun = true)
@@ -222,14 +251,55 @@ internal class NStackTest {
             lastUpdated = lastUpdated
         )
 
-        private val language1 = Language(0, "", Locale.ENGLISH, "", isDefault = false, isBestFit = false)
-        private val language2 = Language(0, "", Locale.GERMAN, "", isDefault = true, isBestFit = false)
-        private val language3 = Language(0, "", Locale.FRENCH, "", isDefault = false, isBestFit = false)
-        private val languageIndex1 = LocalizeIndex(0, "url1", Date(), shouldUpdate = true, language = language1)
-        private val languageIndex2 = LocalizeIndex(0, "url2", Date(), shouldUpdate = true, language = language2)
-        private val languageIndex3 = LocalizeIndex(0, "url3", Date(), shouldUpdate = false, language = language3)
-        private val appUpdateDate = AppUpdateData(localize = listOf(languageIndex1, languageIndex2, languageIndex3))
-        private val appUpdateResponse = AppUpdateResponse(appUpdateDate, AppUpdateMeta(language1.locale.toString()))
+        private val language1 = Language(
+            id = 0,
+            name = "",
+            locale = Locale.ENGLISH.displayName,
+            direction = "",
+            isDefault = false,
+            isBestFit = false
+        )
+        private val language2 = Language(
+            id = 0,
+            name = "",
+            locale = Locale.GERMAN.displayName,
+            direction = "",
+            isDefault = true,
+            isBestFit = false
+        )
+        private val language3 = Language(
+            id = 0,
+            name = "",
+            locale = Locale.FRENCH.displayName,
+            direction = "",
+            isDefault = false,
+            isBestFit = false
+        )
+        private val languageIndex1 = LocalizeIndex(
+            0,
+            url = "url1",
+            lastUpdatedAt = Date().toString(),
+            shouldUpdate = true,
+            language = language1
+        )
+        private val languageIndex2 = LocalizeIndex(
+            0,
+            url = "url2",
+            lastUpdatedAt = Date().toString(),
+            shouldUpdate = true,
+            language = language2
+        )
+        private val languageIndex3 = LocalizeIndex(
+            0,
+            url = "url3",
+            lastUpdatedAt = Date().toString(),
+            shouldUpdate = false,
+            language = language3
+        )
+        private val appUpdateDate =
+            AppUpdateData(localize = listOf(languageIndex1, languageIndex2, languageIndex3))
+        private val appUpdateResponse =
+            AppUpdateResponse(appUpdateDate, AppUpdateMeta(language1.locale))
 
         private val locale1 = Locale("it-IT")
         private val translations1 = mockk<JSONObject>()
