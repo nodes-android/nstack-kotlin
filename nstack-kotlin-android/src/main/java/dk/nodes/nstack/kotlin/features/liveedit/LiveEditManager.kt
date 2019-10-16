@@ -1,4 +1,4 @@
-package dk.nodes.nstack.kotlin.managers
+package dk.nodes.nstack.kotlin.features.liveedit
 
 import android.content.DialogInterface
 import android.content.res.Resources
@@ -16,6 +16,9 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import dk.nodes.nstack.R
 import dk.nodes.nstack.kotlin.NStack
+import dk.nodes.nstack.kotlin.managers.AppOpenSettingsManager
+import dk.nodes.nstack.kotlin.managers.NetworkManager
+import dk.nodes.nstack.kotlin.managers.ViewTranslationManager
 import dk.nodes.nstack.kotlin.models.NStackException
 import dk.nodes.nstack.kotlin.models.TranslationData
 import dk.nodes.nstack.kotlin.models.local.KeyAndTranslation

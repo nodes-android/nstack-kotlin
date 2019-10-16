@@ -7,7 +7,7 @@ import android.os.Bundle
 import android.view.View
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import dk.nodes.nstack.R
-import dk.nodes.nstack.kotlin.managers.LiveEditManager
+import dk.nodes.nstack.kotlin.features.liveedit.LiveEditManager
 import dk.nodes.nstack.kotlin.util.extensions.setNavigationBarColor
 
 private enum class DisplayedFeature {
