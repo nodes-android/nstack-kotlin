@@ -28,6 +28,8 @@ import dk.nodes.nstack.kotlin.providers.RepositoryModule
 import dk.nodes.nstack.kotlin.util.*
 import dk.nodes.nstack.kotlin.util.extensions.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.lang.ref.WeakReference
@@ -884,6 +886,11 @@ object NStack {
             } != null
         }
 
+        fun shouldShow(callback: (Boolean) -> Unit) =
+            GlobalScope.launch(Dispatchers.Main) {
+                callback(withContext(Dispatchers.IO) { shouldShow() })
+            }
+
         /**
          * call this when user performs a rate reminder related action
          *
@@ -897,6 +904,12 @@ object NStack {
                     action
             )
         }
+
+        fun action(action: String, callback: () -> Unit = { }) =
+            GlobalScope.launch(Dispatchers.Main) {
+                withContext(Dispatchers.IO) { action(action) }
+                callback()
+            }
 
         /**
          * Shows an alert dialog asking user whether they would rate the app
@@ -934,6 +947,11 @@ object NStack {
             rateReminderId = 0
             return answer
         }
+
+        fun show(context: Context, callback: (RateReminderAnswer) -> Unit) =
+            GlobalScope.launch(Dispatchers.Main) {
+                callback(withContext(Dispatchers.IO) { show(context) })
+            }
     }
 
     object Feedback {
@@ -955,6 +973,12 @@ object NStack {
             )
             networkManager.postFeedback(feedback)
         }
+
+        fun send(message: String, callback: () -> Unit) =
+            GlobalScope.launch(Dispatchers.Main) {
+                withContext(Dispatchers.IO) { send(message) }
+                callback()
+            }
     }
 
     object Terms {
