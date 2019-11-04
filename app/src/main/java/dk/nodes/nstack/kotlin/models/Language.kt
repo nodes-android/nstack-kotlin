@@ -15,7 +15,16 @@ data class Language(
     constructor(jsonObject: JSONObject) : this(
         id = jsonObject.getInt("id"),
         name = jsonObject.getString("name"),
-        locale = Locale(jsonObject.getString("locale")),
+        locale = try { // Locale.forLanguageTag() would be better
+            Locale(
+                jsonObject.getString("locale").split("-|_").first(),
+                jsonObject.getString("locale").split("-|_").last()
+            )
+        } catch (e : NullPointerException) {
+            Locale(
+                    jsonObject.getString("locale")
+            )
+        },
         direction = jsonObject.getString("direction"),
         isDefault = jsonObject.getBoolean("is_default"),
         isBestFit = jsonObject.getBoolean("is_best_fit")
