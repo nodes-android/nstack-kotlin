@@ -253,14 +253,6 @@ object NStack {
      * Class Start
      */
 
-    @Deprecated(
-        "Use init sending debug mode",
-        ReplaceWith("init(context, boolean)", "dk.nodes.nstack.kotlin.NStack.init")
-    )
-    fun init(context: Context) {
-        init(context, false)
-    }
-
     fun init(context: Context, debugMode: Boolean, vararg plugin: Any) {
         NLog.i(this, "NStack initializing")
         if (isInitialized) {
@@ -403,31 +395,6 @@ object NStack {
         if (index.language.isBestFit) {
             language = index.language.locale ?: defaultLanguage
         }
-    }
-
-    /**
-     * Call it to notify that the message was seen and doesn't need to appear anymore
-     */
-    @Deprecated(
-        message = "Messages features are now accessible via NStack.Messages object",
-        replaceWith = ReplaceWith(
-            expression = "NStack.Messages.setMessageViewed(message)",
-            imports = ["dk.nodes.nstack.kotlin.NStack"]
-        )
-    )
-    fun messageSeen(message: Message) {
-        val appOpenSettings = appOpenSettingsManager.getAppOpenSettings()
-        networkManager.postMessageSeen(appOpenSettings.guid, message.id)
-    }
-
-    /**
-     * Call it to notify that the rate reminder was seen and doesn't need to appear any more
-     * @param rated - true if user pressed Yes, false if user pressed No, not called if user pressed Later
-     */
-    @Deprecated("use RateReminder to check and show rate reminder")
-    fun onRateReminderAction(rated: Boolean) {
-        val appOpenSettings = appOpenSettingsManager.getAppOpenSettings()
-        networkManager.postRateReminderSeen(appOpenSettings, rated)
     }
 
     /**
@@ -717,22 +684,8 @@ object NStack {
     }
 
     /**
-     * Enables the live editing feature for text in the UI
-     *
-     * Please note that the recent versions of NStack support additional features triggered with the
-     * shake gesture so this method is now deprecated and just calls [enableMenuOnShake]
-     *
-     * @see enableMenuOnShake
+     * Enables NStack features such as live-edit and bug-feedback.
      */
-    @Deprecated(
-        "Deprecated to support more features on shake.",
-        ReplaceWith(
-            "enableMenuOnShake(context)",
-            "dk.nodes.nstack.kotlin.NStack.enableMenuOnShake"
-        )
-    )
-    fun enableLiveEdit(context: Context) = enableMenuOnShake(context)
-
     fun enableMenuOnShake(context: Context) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
