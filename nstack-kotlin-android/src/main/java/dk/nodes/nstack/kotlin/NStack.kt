@@ -253,7 +253,7 @@ object NStack {
      * Class Start
      */
 
-    fun init(context: Context, debugMode: Boolean, vararg plugin: Any) {
+    fun init(context: Context, debugMode: Boolean = false, vararg plugin: Any = emptyArray()) {
         NLog.i(this, "NStack initializing")
         if (isInitialized) {
             NLog.w(this, "NStack already initialized")
