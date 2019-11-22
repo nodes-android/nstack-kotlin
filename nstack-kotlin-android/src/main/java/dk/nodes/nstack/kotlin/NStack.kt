@@ -218,7 +218,7 @@ object NStack {
     /**
      * Enable/Disable debug mode
      */
-    var debugMode: Boolean
+    private var debugMode: Boolean
         get() = NLog.enableLogging
         set(value) {
             NLog.enableLogging = value
