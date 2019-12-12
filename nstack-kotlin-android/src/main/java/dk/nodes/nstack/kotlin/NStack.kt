@@ -243,16 +243,7 @@ object NStack {
     /**
      * Class Start
      */
-
-    @Deprecated(
-        "Use init sending debug mode",
-        ReplaceWith("init(context, boolean)", "dk.nodes.nstack.kotlin.NStack.init")
-    )
-    fun init(context: Context) {
-        init(context, false)
-    }
-
-    fun init(context: Context, vararg plugin: Any) {
+    fun init(context: Context, debugModeOverride: Boolean = false) {
         NLog.i(this, "NStack initializing")
         if (isInitialized) {
             NLog.w(this, "NStack already initialized")
@@ -260,8 +251,6 @@ object NStack {
         }
 
         initDebug()
-
-
 
         val nstackModule = NStackModule(context, translationHolder)
         val managersModule = ManagersModule(nstackModule)
@@ -277,7 +266,6 @@ object NStack {
 
         registerLocaleChangeBroadcastListener(context)
 
-        plugins.addAll(plugin)
         viewTranslationManager = nstackModule.provideViewTranslationManager()
         appInfo = nstackModule.provideClientAppInfo()
         plugins += viewTranslationManager
@@ -303,7 +291,11 @@ object NStack {
         isInitialized = true
     }
 
-    private fun initDebug() {
+    private fun initDebug(debugModeOverride: Boolean = false) {
+        if(debugModeOverride) {
+            this.debugMode = true
+            return
+        }
         val buildConfigDebugFlag = contextWrapper.getBuildConfigValue("DEBUG") as? Boolean
         NLog.w(this, "NStack found BuildConfig.DEBUG: $buildConfigDebugFlag")
         this.debugMode = buildConfigDebugFlag ?: false

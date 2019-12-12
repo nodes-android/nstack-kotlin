@@ -10,7 +10,7 @@ class Application : Application() {
 
         NStack.baseUrl = "https://nstack-staging.vapor.cloud"
         NStack.translationClass = Translation::class.java
-        NStack.init(this, BuildConfig.DEBUG)
+        NStack.init(this)
         if (BuildConfig.DEBUG) {
             NStack.enableMenuOnShake(this)
         }
