@@ -24,4 +24,15 @@ internal class ContextWrapper(
             action()
         }
     }
+
+    fun getBuildConfigValue(fieldName: String): Any? {
+        return try {
+            val className = context.applicationContext.javaClass.`package`?.name + ".BuildConfig"
+            val clazz = Class.forName(className)
+            val field = clazz.getField(fieldName)
+            field.get(null)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

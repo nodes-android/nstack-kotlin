@@ -30,17 +30,8 @@ import dk.nodes.nstack.kotlin.managers.LiveEditManager
 import dk.nodes.nstack.kotlin.managers.NetworkManager
 import dk.nodes.nstack.kotlin.managers.PrefManager
 import dk.nodes.nstack.kotlin.managers.ViewTranslationManager
-import dk.nodes.nstack.kotlin.models.AppOpen
-import dk.nodes.nstack.kotlin.models.AppOpenSettings
-import dk.nodes.nstack.kotlin.models.ClientAppInfo
-import dk.nodes.nstack.kotlin.models.Error
-import dk.nodes.nstack.kotlin.models.FeedbackType
-import dk.nodes.nstack.kotlin.models.LocalizeIndex
-import dk.nodes.nstack.kotlin.models.Message
-import dk.nodes.nstack.kotlin.models.RateReminderAnswer
-import dk.nodes.nstack.kotlin.models.Result
-import dk.nodes.nstack.kotlin.models.TermsDetails
-import dk.nodes.nstack.kotlin.models.TranslationData
+import dk.nodes.nstack.kotlin.models.*
+import dk.nodes.nstack.kotlin.models.NStackMeta
 import dk.nodes.nstack.kotlin.models.local.Environment
 import dk.nodes.nstack.kotlin.plugin.NStackViewPlugin
 import dk.nodes.nstack.kotlin.provider.TranslationHolder
@@ -261,13 +252,16 @@ object NStack {
         init(context, false)
     }
 
-    fun init(context: Context, debugMode: Boolean, vararg plugin: Any) {
+    fun init(context: Context, vararg plugin: Any) {
         NLog.i(this, "NStack initializing")
         if (isInitialized) {
             NLog.w(this, "NStack already initialized")
             return
         }
-        this.debugMode = debugMode
+
+        initDebug()
+
+
 
         val nstackModule = NStackModule(context, translationHolder)
         val managersModule = ManagersModule(nstackModule)
@@ -276,7 +270,7 @@ object NStack {
         val nstackMeta = nstackModule.provideNStackMeta()
         appIdKey = nstackMeta.appIdKey
         appApiKey = nstackMeta.apiKey
-        env = nstackMeta.env
+        initEnvironment(nstackMeta)
 
         viewTranslationManager = nstackModule.provideViewTranslationManager()
         classTranslationManager = nstackModule.provideClassTranslationManager()
@@ -307,6 +301,27 @@ object NStack {
         }
 
         isInitialized = true
+    }
+
+    private fun initDebug() {
+        val buildConfigDebugFlag = contextWrapper.getBuildConfigValue("DEBUG") as? Boolean
+        NLog.w(this, "NStack found BuildConfig.DEBUG: $buildConfigDebugFlag")
+        this.debugMode = buildConfigDebugFlag ?: false
+    }
+
+    private fun initEnvironment(nstackMeta: NStackMeta) {
+        val buildConfigFlavor = (contextWrapper.getBuildConfigValue("FLAVOR") as? String)?.toLowerCase() ?: ""
+
+        val detectedEnvironment = when {
+            buildConfigFlavor.contains("production") -> "production"
+            buildConfigFlavor.contains("staging") -> "staging"
+            buildConfigFlavor.contains("development") -> "development"
+            else -> nstackMeta.env
+        }
+
+        NLog.w(this, "NStack found BuildConfig.FLAVOR: $buildConfigFlavor - set environment to: $detectedEnvironment")
+
+        env = detectedEnvironment
     }
 
     private fun createMainMenuDisplayer(context: Context): MainMenuDisplayer {
