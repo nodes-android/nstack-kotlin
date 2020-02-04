@@ -130,26 +130,6 @@ class NetworkManager(
     /**
      * Notifies the backend that the message has been seen
      */
-    @Deprecated("Use suspend fun postMessageSeen()")
-    fun postMessageSeen(guid: String, messageId: Int) {
-        FormBody.Builder().also {
-            it["guid"] = guid
-            it["message_id"] = messageId.toString()
-        }.buildRequest("$baseUrl/api/v1/notify/messages/views")
-            .call()
-            .enqueue(object : Callback {
-
-                override fun onFailure(call: Call, e: IOException) {
-                }
-
-                override fun onResponse(call: Call, response: Response) {
-                }
-            })
-    }
-
-    /**
-     * Notifies the backend that the message has been seen
-     */
     suspend fun postMessageSeen(
         settings: AppOpenSettings,
         messageID: Int
