@@ -62,6 +62,9 @@ import dk.nodes.nstack.kotlin.util.extensions.languageCode
 import dk.nodes.nstack.kotlin.util.extensions.locale
 import dk.nodes.nstack.kotlin.util.extensions.removeFirst
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.ConflatedBroadcastChannel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.lang.ref.WeakReference
@@ -99,6 +102,8 @@ object NStack {
             return this@NStack.getTranslationByKey(key)
         }
     }
+
+    private val appOpenChannel = ConflatedBroadcastChannel<Result<AppOpen>>()
 
     private var currentLanguage: JSONObject? = null
 
@@ -380,6 +385,12 @@ object NStack {
                 result
             }
         }
+    }.also {
+        appOpenChannel.send(it)
+    }
+
+    fun appOpenFLow(): Flow<Result<AppOpen>> {
+        return appOpenChannel.asFlow()
     }
 
     private suspend fun handleLocalizeIndex(index: LocalizeIndex) {

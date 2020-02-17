@@ -1,7 +1,11 @@
 package dk.nodes.nstack.demo
 
 import android.app.Application
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.coroutineScope
 import dk.nodes.nstack.kotlin.NStack
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class Application : Application() {
 
@@ -13,6 +17,9 @@ class Application : Application() {
         NStack.init(this, BuildConfig.DEBUG)
         if (BuildConfig.DEBUG) {
             NStack.enableMenuOnShake(this)
+        }
+        ProcessLifecycleOwner.get().lifecycle.coroutineScope.launch(Dispatchers.IO) {
+            NStack.appOpen()
         }
     }
 }
