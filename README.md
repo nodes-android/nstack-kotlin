@@ -24,8 +24,10 @@ buildscript {
     }
 }
 ```
-2. Add NStack SDK dependency to your app module
+2. Apply the NStack gradle plugin and Add NStack SDK dependency to your app module
 ```groovy
+apply plugin: 'dk.nstack.translation.plugin'
+
 translation {
     appId = "replace with NStack Application id"
     apiKey = "replace with NStack Rest API key"
