@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
 import android.hardware.SensorManager
 import android.os.Build
@@ -22,51 +23,21 @@ import dk.nodes.nstack.kotlin.features.feedback.presentation.FeedbackActivity
 import dk.nodes.nstack.kotlin.features.mainmenu.presentation.MainMenuDisplayer
 import dk.nodes.nstack.kotlin.features.messages.presentation.MessageDialog
 import dk.nodes.nstack.kotlin.features.terms.data.TermsRepository
-import dk.nodes.nstack.kotlin.managers.AppOpenSettingsManager
-import dk.nodes.nstack.kotlin.managers.AssetCacheManager
-import dk.nodes.nstack.kotlin.managers.ClassTranslationManager
-import dk.nodes.nstack.kotlin.managers.ConnectionManager
-import dk.nodes.nstack.kotlin.managers.LiveEditManager
-import dk.nodes.nstack.kotlin.managers.NetworkManager
-import dk.nodes.nstack.kotlin.managers.PrefManager
-import dk.nodes.nstack.kotlin.managers.ViewTranslationManager
-import dk.nodes.nstack.kotlin.models.AppOpen
-import dk.nodes.nstack.kotlin.models.AppOpenSettings
-import dk.nodes.nstack.kotlin.models.ClientAppInfo
-import dk.nodes.nstack.kotlin.models.Error
-import dk.nodes.nstack.kotlin.models.FeedbackType
-import dk.nodes.nstack.kotlin.models.LocalizeIndex
-import dk.nodes.nstack.kotlin.models.Message
-import dk.nodes.nstack.kotlin.models.RateReminderAnswer
-import dk.nodes.nstack.kotlin.models.Result
-import dk.nodes.nstack.kotlin.models.TermsDetails
-import dk.nodes.nstack.kotlin.models.TranslationData
+import dk.nodes.nstack.kotlin.managers.*
+import dk.nodes.nstack.kotlin.models.*
 import dk.nodes.nstack.kotlin.models.local.Environment
 import dk.nodes.nstack.kotlin.plugin.NStackViewPlugin
 import dk.nodes.nstack.kotlin.provider.TranslationHolder
 import dk.nodes.nstack.kotlin.providers.ManagersModule
 import dk.nodes.nstack.kotlin.providers.NStackModule
 import dk.nodes.nstack.kotlin.providers.RepositoryModule
-import dk.nodes.nstack.kotlin.util.LanguageListener
-import dk.nodes.nstack.kotlin.util.LanguagesListener
-import dk.nodes.nstack.kotlin.util.NLog
-import dk.nodes.nstack.kotlin.util.OnLanguageChangedFunction
-import dk.nodes.nstack.kotlin.util.OnLanguageChangedListener
-import dk.nodes.nstack.kotlin.util.OnLanguagesChangedFunction
-import dk.nodes.nstack.kotlin.util.OnLanguagesChangedListener
-import dk.nodes.nstack.kotlin.util.ShakeDetector
-import dk.nodes.nstack.kotlin.util.extensions.ContextWrapper
-import dk.nodes.nstack.kotlin.util.extensions.asJsonObject
-import dk.nodes.nstack.kotlin.util.extensions.cleanKeyName
-import dk.nodes.nstack.kotlin.util.extensions.languageCode
-import dk.nodes.nstack.kotlin.util.extensions.locale
-import dk.nodes.nstack.kotlin.util.extensions.removeFirst
+import dk.nodes.nstack.kotlin.util.*
+import dk.nodes.nstack.kotlin.util.extensions.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.lang.ref.WeakReference
-import java.util.ArrayList
-import java.util.Locale
+import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -252,38 +223,31 @@ object NStack {
     /**
      * Class Start
      */
-
-    @Deprecated(
-        "Use init sending debug mode",
-        ReplaceWith("init(context, boolean)", "dk.nodes.nstack.kotlin.NStack.init")
-    )
-    fun init(context: Context) {
-        init(context, false)
-    }
-
-    fun init(context: Context, debugMode: Boolean, vararg plugin: Any) {
+    fun init(context: Context, debugModeOverride: Boolean = false) {
         NLog.i(this, "NStack initializing")
         if (isInitialized) {
             NLog.w(this, "NStack already initialized")
             return
         }
-        this.debugMode = debugMode
+
+
 
         val nstackModule = NStackModule(context, translationHolder)
         val managersModule = ManagersModule(nstackModule)
         val repositoryModule = RepositoryModule(nstackModule)
+        contextWrapper = nstackModule.provideContextWrapper()
 
         val nstackMeta = nstackModule.provideNStackMeta()
         appIdKey = nstackMeta.appIdKey
         appApiKey = nstackMeta.apiKey
-        env = nstackMeta.env
+        initEnvironment(nstackMeta)
+        initDebug()
 
         viewTranslationManager = nstackModule.provideViewTranslationManager()
         classTranslationManager = nstackModule.provideClassTranslationManager()
 
         registerLocaleChangeBroadcastListener(context)
 
-        plugins.addAll(plugin)
         viewTranslationManager = nstackModule.provideViewTranslationManager()
         appInfo = nstackModule.provideClientAppInfo()
         plugins += viewTranslationManager
@@ -291,7 +255,6 @@ object NStack {
         assetCacheManager = managersModule.provideAssetCacheManager()
         appOpenSettingsManager = managersModule.provideAppOpenSettingsManager()
         prefManager = managersModule.providePrefManager()
-        contextWrapper = nstackModule.provideContextWrapper()
         networkManager = nstackModule.provideNetworkManager()
         mainMenuDisplayer = createMainMenuDisplayer(context)
 
@@ -307,6 +270,32 @@ object NStack {
         }
 
         isInitialized = true
+    }
+
+    private fun initDebug(debugModeOverride: Boolean = false) {
+        if(debugModeOverride) {
+            this.debugMode = true
+            return
+        }
+
+        val buildConfigDebugFlag = contextWrapper.getBuildConfigValue("DEBUG") as? Boolean
+        this.debugMode = buildConfigDebugFlag ?: false
+        NLog.e(this, "NStack found BuildConfig.DEBUG: $buildConfigDebugFlag")
+    }
+
+    private fun initEnvironment(nstackMeta: NStackMeta) {
+        val buildConfigFlavor = (contextWrapper.getBuildConfigValue("FLAVOR") as? String)?.toLowerCase() ?: ""
+
+        val detectedEnvironment = when {
+            buildConfigFlavor.contains("production") -> "production"
+            buildConfigFlavor.contains("staging") -> "staging"
+            buildConfigFlavor.contains("development") -> "development"
+            else -> nstackMeta.env
+        }
+
+        NLog.w(this, "NStack found BuildConfig.FLAVOR: $buildConfigFlavor - set environment to: $detectedEnvironment")
+
+        env = detectedEnvironment
     }
 
     private fun createMainMenuDisplayer(context: Context): MainMenuDisplayer {
