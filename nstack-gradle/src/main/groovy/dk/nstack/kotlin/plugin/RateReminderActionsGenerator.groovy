@@ -8,10 +8,10 @@ class RateReminderActionsGenerator {
         def url = TranslationPlugin.project.translation.contentUrl + "api/v2/notify/rate_reminder_v2/actions"
 
         def actionsJson = Util.getTextFromUrlWithErrorResponse(url)
-        if (actionsJson.isEmpty()) {
-            return ""
+        def actions = new ArrayList<String>()
+        if (!actionsJson.isEmpty()) {
+            actions = new JsonSlurper().parseText(actionsJson).data as List<String>
         }
-        def actions = new JsonSlurper().parseText(actionsJson).data as List<String>
 
         def generated = "package $packageName\n\n"
         generated += "import dk.nodes.nstack.kotlin.NStack\n\n"
